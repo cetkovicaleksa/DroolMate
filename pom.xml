@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  
+  <groupId>com.github.cetkovicaleksa</groupId>
+  <artifactId>droolmate-parent</artifactId>
+  <packaging>pom</packaging>
+  <version>999-SNAPSHOT</version>
+  
+  <name>DroolMate :: Parent</name>
+  <description>This repo contains all code related to the DroolMate expert system project.</description>
+  <inceptionYear>2026</inceptionYear>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  
+  <scm>
+    <connection>scm:git:https://github.com/cetkovicaleksa/droolmate.git</connection>
+    <developerConnection>scm:git:git@github.com:cetkovicaleksa/droolmate.git</developerConnection>
+    <url>https://github.com/cetkovicaleksa/droolmate</url>
+  </scm>
+  
+  <developers>
+    <developer>
+      <id>aki</id>
+      <name>Алекса Ћетковић</name>
+      <email>cetkovic.sv77.2022@uns.ac.rs</email>
+    </developer>
+  </developers>
+  
+  <properties>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <version.org.drools>10.1.0</version.org.drools>
+    <version.org.springframework.boot>4.0.6</version.org.springframework.boot>
+    <version.org.junit>6.0.3</version.org.junit>
+    <version.org.slf4j>2.0.18</version.org.slf4j>
+  </properties>
+
+  <modules>
+    <module>droolmate-rules</module>
+    <module>droolmate-model</module>
+    <module>droolmate-service</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${version.org.junit}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.drools</groupId>
+        <artifactId>drools-bom</artifactId>
+        <version>${version.org.drools}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <version>${version.org.slf4j}</version>
+      </dependency>
+
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.15.0</version>
+          <configuration>
+            <release>${maven.compiler.release}</release>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.5</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.kie</groupId>
+          <artifactId>kie-maven-plugin</artifactId>
+          <version>${version.org.drools}</version>
+          <extensions>true</extensions>
+        </plugin>
+
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${version.org.springframework.boot}</version>
+        </plugin>
+
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
