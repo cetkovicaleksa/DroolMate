@@ -17,14 +17,14 @@ public class Recommendation {
     private double combinedScore;  // 0-100, weighted average
 
     private boolean recommended;   // true if meets minimum thresholds
-    private RecommendationLevel level;
+    private Level level;
 
     private String reasoning;
     private long timestamp;
 
     public Recommendation(String breedName, String roleId, String roleName,
                          PhysicalFit physicalFit, BehavioralFit behavioralFit, double combinedScore,
-                         boolean recommended, RecommendationLevel level, String reasoning) {
+                         boolean recommended, Level level, String reasoning) {
         this.breedName = breedName;
         this.roleId = roleId;
         this.roleName = roleName;
@@ -47,7 +47,7 @@ public class Recommendation {
     public double getPhysicalScore() { return physicalFit != null ? (physicalFit.isHeightSuitable() && physicalFit.isWeightSuitable() ? 100 : 50) : 0; }
     public double getBehavioralScore() { return behavioralFit != null ? behavioralFit.getTrainabilityFit() : 0; }
     public boolean isRecommended() { return recommended; }
-    public RecommendationLevel getLevel() { return level; }
+    public Recommendation.Level getLevel() { return level; }
     public String getLevelDisplayName() { return level != null ? level.getDisplayName() : "Unknown"; }
     public String getReasoning() { return reasoning; }
     public long getTimestamp() { return timestamp; }
@@ -62,5 +62,43 @@ public class Recommendation {
                 ", recommended=" + recommended +
                 '}';
     }
+
+    /**
+     * Recommendation level enum for breed-role suitability assessment.
+     * @source: ADI Standards - classification framework
+     */
+    public enum Level {
+        EXCELLENT(85, "Excellent"),
+        GOOD(75, "Good"),
+        FAIR(60, "Fair"),
+        NOT_RECOMMENDED(0, "Not Recommended");
+
+        private final int minScore;
+        private final String displayName;
+
+        Level(int minScore, String displayName) {
+            this.minScore = minScore;
+            this.displayName = displayName;
+        }
+
+        public int getMinScore() {
+            return minScore;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        /**
+         * Determine level from combined score.
+         */
+        public static Level fromScore(double score) {
+            if (score >= EXCELLENT.minScore) return EXCELLENT;
+            if (score >= GOOD.minScore) return GOOD;
+            if (score >= FAIR.minScore) return FAIR;
+            return NOT_RECOMMENDED;
+        }
+    }
+
 }
 

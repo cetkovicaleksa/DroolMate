@@ -33,7 +33,7 @@ end
 
 query "suitable breeds" (String roleIdParam)
     $rec : Recommendation(roleId == roleIdParam,
-                   (recommendationLevel == "Excellent" || recommendationLevel == "Good"))
+                   (level == Level.GOOD || level == Level.EXCELLENT))
 end
 
 // BC Queries: Check breed suitability for a role

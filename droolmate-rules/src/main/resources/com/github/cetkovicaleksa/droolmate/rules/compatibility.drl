@@ -5,7 +5,6 @@ import com.github.cetkovicaleksa.droolmate.model.PhysicalFit;
 import com.github.cetkovicaleksa.droolmate.model.BehavioralFit;
 import com.github.cetkovicaleksa.droolmate.model.CompatibilityScore;
 import com.github.cetkovicaleksa.droolmate.model.Recommendation;
-import com.github.cetkovicaleksa.droolmate.model.RecommendationLevel;
 import java.util.List;
 
 dialect "mvel"
@@ -30,7 +29,7 @@ rule "Compute combined compatibility score"
         $behavioralFit : BehavioralFit(breedName == $breed.name, roleId == $role.roleId)
     then
         // Calculate physical score: 100 if both height and weight suitable, 50 if one, 0 if none
-        double physicalScore;
+//        double physicalScore;
         if ($physicalFit.isHeightSuitable() && $physicalFit.isWeightSuitable()) {
             physicalScore = 100;
         } else if ($physicalFit.isHeightSuitable() || $physicalFit.isWeightSuitable()) {
@@ -40,13 +39,13 @@ rule "Compute combined compatibility score"
         }
 
         // Calculate behavioral score: weighted average of Hart factors
-        double behavioralScore = ($behavioralFit.getTrainabilityFit() * 0.5) +
+        behavioralScore = ($behavioralFit.getTrainabilityFit() * 0.5) +
                                ($behavioralFit.getAggressionFit() * 0.3) +
                                ($behavioralFit.getReactivityFit() * 0.2);
         behavioralScore = Math.min(100, Math.max(0, behavioralScore));
 
         // Combined score: Physical 30% + Behavioral 70%
-        double combinedScore = (physicalScore * 0.3) + (behavioralScore * 0.7);
+        combinedScore = (physicalScore * 0.3) + (behavioralScore * 0.7);
         combinedScore = Math.min(100, Math.max(0, combinedScore));
 
         // Check ADI thresholds
@@ -54,7 +53,7 @@ rule "Compute combined compatibility score"
         boolean behavioralOk = behavioralScore >= 75;
         boolean combinedOk = combinedScore >= 75;
 
-        RecommendationLevel level = RecommendationLevel.fromScore(combinedScore);
+        Recommendation.Level level = Recommendation.Level.fromScore(combinedScore);
 
         String explanation = 
             "Physical: " + String.format("%.1f%%", physicalScore) + 

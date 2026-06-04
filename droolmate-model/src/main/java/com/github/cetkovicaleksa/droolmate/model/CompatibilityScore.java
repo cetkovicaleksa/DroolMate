@@ -17,14 +17,14 @@ public class CompatibilityScore {
     private boolean behavioralOk;  // behavioral >= 75
     private boolean combinedOk;    // combined >= 75
     
-    private RecommendationLevel level;
+    private Recommendation.Level level;
     private String explanation;
     private long timestamp;
 
     public CompatibilityScore(String breedName, String roleId,
                              PhysicalFit physicalFit, BehavioralFit behavioralFit, double combinedScore,
                              boolean physicalOk, boolean behavioralOk, boolean combinedOk,
-                             RecommendationLevel level, String explanation) {
+                             Recommendation.Level level, String explanation) {
         this.breedName = breedName;
         this.roleId = roleId;
         this.physicalFit = physicalFit;
@@ -46,7 +46,7 @@ public class CompatibilityScore {
     public boolean isPhysicalOk() { return physicalOk; }
     public boolean isBehavioralOk() { return behavioralOk; }
     public boolean isCombinedOk() { return combinedOk; }
-    public RecommendationLevel getLevel() { return level; }
+    public Recommendation.Level getLevel() { return level; }
     public String getExplanation() { return explanation; }
     public long getTimestamp() { return timestamp; }
 
