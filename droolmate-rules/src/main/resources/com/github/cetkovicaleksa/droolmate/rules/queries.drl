@@ -1,0 +1,46 @@
+package com.github.cetkovicaleksa.droolmate.rules;
+import com.github.cetkovicaleksa.droolmate.model.Breed;
+import com.github.cetkovicaleksa.droolmate.model.RoleRequirement;
+import com.github.cetkovicaleksa.droolmate.model.PhysicalFit;
+import com.github.cetkovicaleksa.droolmate.model.BehavioralFit;
+import com.github.cetkovicaleksa.droolmate.model.CompatibilityScore;
+import com.github.cetkovicaleksa.droolmate.model.Recommendation;
+
+dialect "mvel"
+
+/**
+ * Query definitions for DroolMate expert system.
+ * FC queries: retrieve pre-computed recommendations
+ * BC queries: check specific breed suitability for a role
+ */
+
+// FC Queries: Get recommendations for a role
+query "all breeds"
+    Breed()
+end
+
+query "all roles"
+    RoleRequirement()
+end
+
+query "recommendations for role" (String roleIdParam)
+    $rec : Recommendation(roleId == roleIdParam)
+end
+
+query "recommended breeds"
+    Recommendation(recommended == true)
+end
+
+query "suitable breeds" (String roleIdParam)
+    $rec : Recommendation(roleId == roleIdParam,
+                   (recommendationLevel == "Excellent" || recommendationLevel == "Good"))
+end
+
+// BC Queries: Check breed suitability for a role
+query "breed suitability" (String breedNameParam, String roleIdParam)
+    $rec : Recommendation(breedName == breedNameParam, roleId == roleIdParam)
+end
+
+query "breed compatibility score" (String breedNameParam, String roleIdParam)
+    $compat : CompatibilityScore(breedName == breedNameParam, roleId == roleIdParam)
+end

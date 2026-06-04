@@ -1,0 +1,132 @@
+package com.github.cetkovicaleksa.droolmate.rules;
+import com.github.cetkovicaleksa.droolmate.model.Breed;
+import com.github.cetkovicaleksa.droolmate.model.RoleRequirement;
+import com.github.cetkovicaleksa.droolmate.model.PhysicalFit;
+import com.github.cetkovicaleksa.droolmate.model.BehavioralFit;
+
+dialect "mvel"
+
+/**
+ * Layer 2: Behavioral Trait Evaluation (Multiple Rules, Single Fact Output)
+ *
+ * @source: Hart (1985) - Behavioral profiles (81% variance explained)
+ * @source: Handbook on Animal-Assisted Therapy - behavioral requirements
+ * @source: ADI Standards - behavioral thresholds for service dogs
+ */
+
+rule "Evaluate reactivity factor against role requirements"
+    agenda-group "behavioral"
+    salience 25
+    when
+        $breed : Breed()
+        $role : RoleRequirement()
+        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
+        not BehavioralFit(breedName == $breed.name, roleId == $role.roleId)
+    then
+        double reactivityScore = $breed.getReactivityScore();
+        double minReactivity = $role.getMinReactivityScore();
+        double maxReactivity = $role.getMaxReactivityScore();
+        
+        // Reactivity fit: 0-100
+        double reactivityFit;
+        if (reactivityScore >= minReactivity && reactivityScore <= maxReactivity) {
+            reactivityFit = 100;
+        } else {
+            reactivityFit = Math.max(0, 100 - (Math.abs(reactivityScore - (minReactivity + maxReactivity) / 2) * 10));
+        }
+        
+        String reactivityEval = "Reactivity: " + String.format("%.0f%%", reactivityFit);
+        
+        // Create preliminary BehavioralFit with reactivity evaluation
+        insert(new BehavioralFit(
+            $breed.getName(),
+            $role.getRoleId(),
+            reactivityScore, 0, 0,  // breed factors: reactivity, placeholders
+            minReactivity, maxReactivity, 0, 0,  // role requirements: placeholders
+            reactivityFit, 0, 0,  // fit scores: reactivity, placeholders
+            reactivityEval
+        ));
+end
+
+rule "Evaluate aggression factor and update behavioral assessment"
+    agenda-group "behavioral"
+    salience 20
+    when
+        $breed : Breed()
+        $role : RoleRequirement()
+        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
+        $behavioralFit : BehavioralFit(breedName == $breed.name, roleId == $role.roleId)
+    then
+        double aggressionScore = $breed.getAggressionScore();
+        double maxAggression = $role.getMaxAggressionScore();
+        
+        // Aggression fit: critical factor, penalized heavily if exceeded
+        double aggressionFit;
+        if (aggressionScore <= maxAggression) {
+            aggressionFit = 100;
+        } else {
+            aggressionFit = Math.max(0, 100 - ((aggressionScore - maxAggression) * 15));
+        }
+        
+        String aggressionEval = "Aggression: " + String.format("%.0f%%", aggressionFit);
+        
+        // Update BehavioralFit with aggression evaluation
+        modify($behavioralFit) {
+            breedAggression = aggressionScore,
+            roleMaxAggression = maxAggression,
+            aggressionFit = aggressionFit,
+            explanation = $behavioralFit.getExplanation() + " | " + aggressionEval
+        };
+end
+
+rule "Evaluate trainability factor and compute combined behavioral score"
+    agenda-group "behavioral"
+    salience 15
+    when
+        $breed : Breed()
+        $role : RoleRequirement()
+        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
+        $behavioralFit : BehavioralFit(breedName == $breed.name, roleId == $role.roleId,
+                                       aggressionFit > 0)  // Ensure aggression was evaluated
+    then
+        double trainabilityScore = $breed.getTrainabilityScore();
+        double minTrainability = $role.getMinTrainabilityScore();
+        
+        // Trainability fit: 0-100
+        double trainabilityFit;
+        if (trainabilityScore >= minTrainability) {
+            trainabilityFit = 100 - ((10 - trainabilityScore) * 5);
+        } else {
+            trainabilityFit = Math.max(0, (trainabilityScore / minTrainability) * 100);
+        }
+        
+        String trainabilityEval = "Trainability: " + String.format("%.0f%%", trainabilityFit);
+        
+        // Weighted average: Trainability 50%, Aggression 30%, Reactivity 20%
+        double behavioralScore = ($behavioralFit.getReactivityFit() * 0.2) +
+                                ($behavioralFit.getAggressionFit() * 0.3) +
+                                (trainabilityFit * 0.5);
+        behavioralScore = Math.min(100, Math.max(0, behavioralScore));
+        
+        // Update BehavioralFit with trainability and final score
+        modify($behavioralFit) {
+            breedTrainability = trainabilityScore,
+            roleMinTrainability = minTrainability,
+            trainabilityFit = trainabilityFit,
+            explanation = $behavioralFit.getExplanation() + " | " + trainabilityEval + 
+                         " | Combined: " + String.format("%.0f%%", behavioralScore)
+        };
+end
+
+rule "Finalize behavioral score for next layer"
+    agenda-group "behavioral"
+    salience 10
+    when
+        $breed : Breed()
+        $role : RoleRequirement()
+        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
+        $behavioralFit : BehavioralFit(breedName == $breed.name, roleId == $role.roleId,
+                                       trainabilityFit > 0)  // Ensure all factors evaluated
+    then
+        // BehavioralFit is complete and ready for compatibility layer
+end

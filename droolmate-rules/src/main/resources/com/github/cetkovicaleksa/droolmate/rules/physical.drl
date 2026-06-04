@@ -1,0 +1,78 @@
+package com.github.cetkovicaleksa.droolmate.rules;
+import com.github.cetkovicaleksa.droolmate.model.Breed;
+import com.github.cetkovicaleksa.droolmate.model.RoleRequirement;
+import com.github.cetkovicaleksa.droolmate.model.PhysicalFit;
+
+dialect "mvel"
+
+/**
+ * Layer 1: Physical Trait Evaluation (Multiple Rules, Single Fact Output)
+ *
+ * @source: FCI Breed Standards - physical characteristic definitions
+ * @source: Handbook on Animal-Assisted Therapy - physical requirements
+ */
+
+rule "Evaluate breed height for role requirements"
+    agenda-group "physical"
+    salience 20
+    when
+        $breed : Breed()
+        $role : RoleRequirement()
+        not PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
+    then
+        double breedAvgHeight = ($breed.getMinHeightCm() + $breed.getMaxHeightCm()) / 2;
+        boolean heightSuitable = breedAvgHeight >= $role.getMinHeightCm() && 
+                                 breedAvgHeight <= $role.getMaxHeightCm();
+        
+        String heightEval = heightSuitable ? 
+            "Height ✓: " + String.format("%.1f cm", breedAvgHeight) :
+            "Height ✗: " + String.format("%.1f cm", breedAvgHeight);
+        
+        // Create preliminary PhysicalFit with height evaluation
+        insert(new PhysicalFit(
+            $breed.getName(),
+            $role.getRoleId(),
+            breedAvgHeight, $role.getMinHeightCm(), $role.getMaxHeightCm(), heightSuitable,
+            0, 0, 0, false,  // weight placeholders
+            heightEval
+        ));
+end
+
+rule "Evaluate breed weight and combine with height evaluation"
+    agenda-group "physical"
+    salience 15
+    when
+        $breed : Breed()
+        $role : RoleRequirement()
+        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
+    then
+        double breedAvgWeight = ($breed.getMinWeightKg() + $breed.getMaxWeightKg()) / 2;
+        boolean weightSuitable = breedAvgWeight >= $role.getMinWeightKg() && 
+                                 breedAvgWeight <= $role.getMaxWeightKg();
+        
+        String weightEval = weightSuitable ? 
+            "Weight ✓: " + String.format("%.1f kg", breedAvgWeight) :
+            "Weight ✗: " + String.format("%.1f kg", breedAvgWeight);
+        
+        // Update PhysicalFit with weight information
+        modify($physicalFit) {
+            breedAvgWeight = breedAvgWeight,
+            roleMinWeight = $role.getMinWeightKg(),
+            roleMaxWeight = $role.getMaxWeightKg(),
+            weightSuitable = weightSuitable,
+            explanation = $physicalFit.getExplanation() + " | " + weightEval
+        };
+end
+
+rule "Finalize physical score calculation"
+    agenda-group "physical"
+    salience 10
+    when
+        $breed : Breed()
+        $role : RoleRequirement()
+        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId,
+                                   breedAvgWeight > 0)  // Ensure weight was evaluated
+    then
+        // Recalculate to ensure it's final
+        // (No action needed - PhysicalFit is complete and ready for next layer)
+end

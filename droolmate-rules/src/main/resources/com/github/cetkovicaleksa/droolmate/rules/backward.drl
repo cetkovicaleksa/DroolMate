@@ -1,0 +1,61 @@
+package com.github.cetkovicaleksa.droolmate.rules;
+
+import com.github.cetkovicaleksa.droolmate.model.*;
+
+dialect "mvel"
+
+/**
+ * Goal-driven (backward chaining style) coordination for FC (forward chain) path.
+ * Manages goal progression: PHYSICAL → BEHAVIORAL → COMPATIBILITY
+ * Works with layered single-responsibility rules.
+ *
+ * @source: Drools goal-driven reasoning patterns
+ */
+
+rule "Start backward reasoning for role query"
+    when
+        $q    : RoleQuery()
+        $role : RoleRequirement(roleId == $q.getRoleId())
+    then
+        System.out.println("[FC] RoleQuery for role=" + $q.getRoleId());
+        for (Object o : drools.getKieRuntime().getObjects()) {
+            if (o instanceof Breed) {
+                Breed b = (Breed) o;
+                insert(new ComputeBreedGoal(b.getName(), $role.getRoleId(), GoalStage.PHYSICAL));
+            }
+        }
+end
+
+rule "Advance PHYSICAL goal to BEHAVIORAL when PhysicalFit finalized"
+    when
+        $g  : ComputeBreedGoal(isPhysical == true)
+        $pf : PhysicalFit(breedName == $g.getBreedName(), roleId == $g.getRoleId(),
+                          breedAvgWeight > 0)  // Ensure weight was evaluated (finalized)
+    then
+        insert(new ComputeBreedGoal($g.getBreedName(), $g.getRoleId(), GoalStage.BEHAVIORAL));
+end
+
+rule "Advance BEHAVIORAL goal to COMPATIBILITY when BehavioralFit finalized"
+    when
+        $g  : ComputeBreedGoal(isBehavioral == true)
+        $bf : BehavioralFit(breedName == $g.getBreedName(), roleId == $g.getRoleId(),
+                            trainabilityFit > 0)  // Ensure trainability was evaluated (finalized)
+    then
+        insert(new ComputeBreedGoal($g.getBreedName(), $g.getRoleId(), GoalStage.COMPATIBILITY));
+end
+
+rule "Trigger compatibility when COMPATIBILITY goal present"
+    when
+        $g : ComputeBreedGoal(isCompatibility == true)
+        not Recommendation(breedName == $g.getBreedName(), roleId == $g.getRoleId())
+    then
+        // Awaiting Recommendation creation
+end
+
+rule "Cleanup goals after recommendation"
+    when
+        $rec : Recommendation($breed : breedName, $roleId : roleId)
+        $g   : ComputeBreedGoal(breedName == $breed, roleId == $roleId)
+    then
+        retract($g);
+end
