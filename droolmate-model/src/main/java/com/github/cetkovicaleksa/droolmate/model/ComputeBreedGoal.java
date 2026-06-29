@@ -1,35 +1,37 @@
 package com.github.cetkovicaleksa.droolmate.model;
 
 /**
- * Goal fact used by backward-style reasoning: compute assessment for a single breed-role pair.
- * Stage indicates which subgoal is requested, enabling recursive/subgoal chaining.
+ * Goal fact used by backward-style reasoning for a breed-role pair (e.x. "Is poodle suitable for guard dog").
  */
 public class ComputeBreedGoal {
-    private String breedName;
-    private String roleId;
-    private GoalStage stage;
-    private long timestamp;
 
-    public ComputeBreedGoal(String breedName, String roleId, GoalStage stage) {
-        this.breedName = breedName;
-        this.roleId = roleId;
-        this.stage = stage;
-        this.timestamp = System.currentTimeMillis();
+    public enum Stage {
+        PHYSICAL(1 << 0),
+        BEHAVIORAL(1 << 1),
+        COMPATIBILITY(1 << 2);
     }
 
-    public String getBreedName() { return breedName; }
-    public String getRoleId() { return roleId; }
-    public GoalStage getStage() { return stage; }
-    public long getTimestamp() { return timestamp; }
+    private final Breed breed;
+    private final Role role;
+    private final Stage stage;
 
-    // Convenience boolean accessors to ease pattern matching in DRL (avoids static enum access issues)
-    public boolean isPhysical() { return stage == GoalStage.PHYSICAL; }
-    public boolean isBehavioral() { return stage == GoalStage.BEHAVIORAL; }
-    public boolean isCompatibility() { return stage == GoalStage.COMPATIBILITY; }
+    public ComputeBreedGoal(Breed breed, Role role, Stage stage) {
+        this.breed = breed;
+        this.role = role;
+        this.stage = stage;
+    }
+
+    public Breed getBreed() { return breed; }
+    public Role getRole() { return role; }
+    public Stage getStage() { return stage; }
+
+    public boolean isPhysical() { return stage | Stage.PHYSICAL != 0; }
+    public boolean isBehavioral() { return stage | Stage.BEHAVIORAL != 0; }
+    public boolean isCompatibility() { return stage | Stage.COMPATIBILITY != 0; }
 
     @Override
     public String toString() {
-        return "ComputeBreedGoal{" + "breed='" + breedName + '\'' + ", role='" + roleId + '\'' + ", stage=" + stage + '}';
+        return "ComputeBreedGoal{" + "breed='" + breed.getName() + '\'' + ", role='" + role.getName() + '\'' + ", stage=" + stage + '}';
     }
 }
 

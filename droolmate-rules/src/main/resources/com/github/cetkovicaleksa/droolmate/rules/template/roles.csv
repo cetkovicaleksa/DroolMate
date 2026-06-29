@@ -1,7 +1,7 @@
-roleId,roleName,minHeightCm,maxHeightCm,minWeightKg,maxWeightKg,minReactivityScore,maxReactivityScore,maxAggressionScore,minTrainabilityScore,parentRoleId,description
-therapy_dog,Therapy Dog,35,65,10,35,2,5,1,7.0,,Calm companion for hospitals schools and care facilities; must be tolerant of noise and unpredictable movement
-guide_dog,Guide Dog for Blind,50,65,25,36,5,8,1,8.5,,Navigation and obstacle avoidance assistance for visually impaired individuals; harness-size range applies
-detection_dog,Detection Dog,45,65,15,35,7,10,3,8.0,,Scent detection of drugs or explosives for law enforcement; high prey/play drive required for reward-based conditioning
-emotional_support_dog,Emotional Support Dog,25,65,5,40,2,5,1,6.0,,Psychological comfort and grounding for individuals with anxiety depression or PTSD; any size acceptable
-mobility_assistance_dog,Mobility Assistance Dog,55,75,25,45,4,7,1,8.0,,Physical bracing balance support and task retrieval for individuals with mobility impairments; must tolerate pressure and harness
-search_rescue_dog,Search and Rescue Dog,50,70,20,40,7,10,2,8.5,,Wilderness and disaster search using air or ground scent; must sustain high effort over extended periods in varied terrain
+name,description,minHeightCm,maxHeightCm,minWeightKg,maxWeightKg,minReactivityScore,maxReactivityScore,maxAggressionScore,minTrainabilityScore
+Therapy Dog,Calm companion for hospitals schools and care facilities; must be tolerant of noise and unpredictable movement,35,65,10,35,2,5,1,7.0
+Guide Dog for Blind,Navigation and obstacle avoidance assistance for visually impaired individuals; harness-size range applies,50,65,25,36,5,8,1,8.5
+Detection Dog,Scent detection of drugs or explosives for law enforcement; high prey/play drive required for reward-based conditioning,45,65,15,35,7,10,3,8.0
+Emotional Support Dog,Psychological comfort and grounding for individuals with anxiety depression or PTSD; any size acceptable,25,65,5,40,2,5,1,6.0
+Mobility Assistance Dog,Physical bracing balance support and task retrieval for individuals with mobility impairments; must tolerate pressure and harness,55,75,25,45,4,7,1,8.0
+Search and Rescue Dog,Wilderness and disaster search using air or ground scent; must sustain high effort over extended periods in varied terrain,50,70,20,40,7,10,2,8.5

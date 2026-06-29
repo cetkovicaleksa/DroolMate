@@ -1,45 +1,57 @@
-package com.github.cetkovicaleksa.droolmate.rules;
-import com.github.cetkovicaleksa.droolmate.model.Breed;
-dialect "mvel"
+template header
+name
+description
+minHeightCm
+maxHeightCm
+minWeightKg
+maxWeightKg
+reactivityScore
+aggressionScore
+trainabilityScore
+fciGroup
+fciSection
+fciSubgroup
 
-/**
- * Template: Breed Initialization
- *
- * Generates one rule per row in breeds.csv.
- * Each rule inserts a Breed fact into working memory during
- * the "initialization" agenda-group.
- *
- * Data source: breeds.csv
- * Columns:    name, fciGroup,
- *             minHeightCm, maxHeightCm, minWeightKg, maxWeightKg,
- *             reactivityScore, aggressionScore, trainabilityScore,
- *             description
- *
- * @source: FCI Breed Standards
- * @source: Hart (1985) - Behavioral profiles of dog breeds
- */
+package com.github.cetkovicaleksa.droolmate.rules.template;
+
+import com.github.cetkovicaleksa.droolmate.model.canine.*;
+
+dialect "mvel"
 
 template "Breed Template"
 
-rule "Initialize Breed @{name}"
+rule "Initialize Breed: @{name}"
     agenda-group "initialization"
     when
+        not exists(Breed($name == "@{name}"))
     then
-        // Insert breed fact with characteristics sourced from breeds.csv.
         Breed breed = new Breed(
             "@{name}",
-            "@{fciGroup}",
-            @{minHeightCm},
-            @{maxHeightCm},
-            @{minWeightKg},
-            @{maxWeightKg},
-            @{reactivityScore},
-            @{aggressionScore},
-            @{trainabilityScore},
-            "@{description}"
+            "@{description}",
+            new PhysicalTraits(
+                @{minHeightCm}, 
+                @{maxHeightCm}, 
+                @{minWeightKg}, 
+                @{maxWeightKg}
+            ),
+            new BehaviourProfile(
+                @{reactivityScore}, 
+                @{aggressionScore}, 
+                @{trainabilityScore}
+            ),
+            new FciClassification(
+                "@{fciGroup}", 
+                "@{fciSection}", 
+                "@{fciSubgroup}"
+            )
         );
+
         insert(breed);
-        System.out.println("[Init] Breed inserted: @{name} (FCI: @{fciGroup})");
+        // ?
+        insert(breed.getPhysicalTraits())
+        insert(breed.getBehaviouralProfile())
+        insert(breed.getClazz())
+        System.out.println("[Init] Breed inserted: @{name}");
 end
 
 end template

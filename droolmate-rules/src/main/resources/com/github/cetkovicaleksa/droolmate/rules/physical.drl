@@ -1,78 +1,334 @@
+/***********************************************************************
+ * PHYSICAL ASSESSMENT
+ *
+ * Physical suitability is assessed independently for each criterion.
+ * Following canine ergonomics literature, body size and weight are
+ * treated as prerequisite constraints for many working roles before
+ * behavioural suitability is considered.
+ *
+ * Sources:
+ *  - Helton (2009), Canine Ergonomics
+ *  - Serpell (2016), The Domestic Dog
+ ***********************************************************************/
+
 package com.github.cetkovicaleksa.droolmate.rules;
-import com.github.cetkovicaleksa.droolmate.model.Breed;
-import com.github.cetkovicaleksa.droolmate.model.RoleRequirement;
-import com.github.cetkovicaleksa.droolmate.model.PhysicalFit;
+
+import com.github.cetkovicaleksa.droolmate.model.canine.*;
+import com.github.cetkovicaleksa.droolmate.model.duty.*;
+import com.github.cetkovicaleksa.droolmate.model.compat.*;
 
 dialect "mvel"
 
-/**
- * Layer 1: Physical Trait Evaluation (Multiple Rules, Single Fact Output)
+
+
+rule "Physical Assessment"
+agenda-group "physical"
+when
+    $breed : Breed($traits : physicalTraits)
+    $role : Role($req : physicalRequirements)
+then
+end
+
+/***********************************************************************
+ * WEIGHT
  *
- * @source: FCI Breed Standards - physical characteristic definitions
- * @source: Handbook on Animal-Assisted Therapy - physical requirements
- */
+ * Weight is evaluated against the required working range.
+ * Helton describes body mass as an important ergonomic constraint for
+ * tasks requiring pulling, carrying, agility and endurance.
+ ***********************************************************************/
 
-rule "Evaluate breed height for role requirements"
-    agenda-group "physical"
-    salience 20
-    when
-        $breed : Breed()
-        $role : RoleRequirement()
-        not PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
-    then
-        double breedAvgHeight = ($breed.getMinHeightCm() + $breed.getMaxHeightCm()) / 2;
-        boolean heightSuitable = breedAvgHeight >= $role.getMinHeightCm() && 
-                                 breedAvgHeight <= $role.getMaxHeightCm();
-        
-        String heightEval = heightSuitable ? 
-            "Height ✓: " + String.format("%.1f cm", breedAvgHeight) :
-            "Height ✗: " + String.format("%.1f cm", breedAvgHeight);
-        
-        // Create preliminary PhysicalFit with height evaluation
-        insert(new PhysicalFit(
-            $breed.getName(),
-            $role.getRoleId(),
-            breedAvgHeight, $role.getMinHeightCm(), $role.getMaxHeightCm(), heightSuitable,
-            0, 0, 0, false,  // weight placeholders
-            heightEval
-        ));
+rule "Weight Assessment"
+extends "Physical Assessment"
+activation-group "phy-weight"
+when
+    not CriterionFit(
+        breed == $breed,
+        role == $role,
+        criterion == "Weight"
+    )
+then
 end
 
-rule "Evaluate breed weight and combine with height evaluation"
-    agenda-group "physical"
-    salience 15
-    when
-        $breed : Breed()
-        $role : RoleRequirement()
-        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId)
-    then
-        double breedAvgWeight = ($breed.getMinWeightKg() + $breed.getMaxWeightKg()) / 2;
-        boolean weightSuitable = breedAvgWeight >= $role.getMinWeightKg() && 
-                                 breedAvgWeight <= $role.getMaxWeightKg();
-        
-        String weightEval = weightSuitable ? 
-            "Weight ✓: " + String.format("%.1f kg", breedAvgWeight) :
-            "Weight ✗: " + String.format("%.1f kg", breedAvgWeight);
-        
-        // Update PhysicalFit with weight information
-        modify($physicalFit) {
-            breedAvgWeight = breedAvgWeight,
-            roleMinWeight = $role.getMinWeightKg(),
-            roleMaxWeight = $role.getMaxWeightKg(),
-            weightSuitable = weightSuitable,
-            explanation = $physicalFit.getExplanation() + " | " + weightEval
-        };
+// Entire breed weight range below required range.
+rule "Weight - Too Light"
+extends "Weight Assessment"
+when
+    eval($traits.getMaxWeightKg() < $req.getMinWeightKg())
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Weight",
+        0,
+        false,
+        "Breed is lighter than the required weight range."
+    ));
 end
 
-rule "Finalize physical score calculation"
-    agenda-group "physical"
-    salience 10
-    when
-        $breed : Breed()
-        $role : RoleRequirement()
-        $physicalFit : PhysicalFit(breedName == $breed.name, roleId == $role.roleId,
-                                   breedAvgWeight > 0)  // Ensure weight was evaluated
-    then
-        // Recalculate to ensure it's final
-        // (No action needed - PhysicalFit is complete and ready for next layer)
+// Entire breed weight range above required range.
+rule "Weight - Too Heavy"
+extends "Weight Assessment"
+when
+    eval($traits.getMinWeightKg() > $req.getMaxWeightKg())
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Weight",
+        0,
+        false,
+        "Breed is heavier than the required weight range."
+    ));
 end
+
+// Breed weight completely satisfies the required range.
+rule "Weight - Ideal"
+extends "Weight Assessment"
+when
+    eval(
+        $traits.getMinWeightKg() >= $req.getMinWeightKg() &&
+        $traits.getMaxWeightKg() <= $req.getMaxWeightKg()
+    )
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Weight",
+        100,
+        true,
+        "Breed weight lies completely within the required range."
+    ));
+end
+
+// Breed overlaps the required range but is not completely inside it.
+rule "Weight - Partial Match"
+extends "Weight Assessment"
+when
+    eval(
+        $traits.getMaxWeightKg() >= $req.getMinWeightKg() &&
+        $traits.getMinWeightKg() <= $req.getMaxWeightKg()
+    )
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Weight",
+        50,
+        true,
+        "Breed weight partially overlaps the required range."
+    ));
+end
+
+/***********************************************************************
+ * HEIGHT
+ *
+ * Shoulder height influences reach, obstacle negotiation and overall
+ * working ergonomics.
+ *
+ * Source:
+ *  - Helton (2009)
+ ***********************************************************************/
+
+rule "Height Assessment"
+extends "Physical Assessment"
+activation-group "phy-height"
+when
+    not CriterionFit(
+        breed == $breed,
+        role == $role,
+        criterion == "Height"
+    )
+then
+end
+
+rule "Height - Too Short"
+extends "Height Assessment"
+when
+    eval($traits.getMaxHeightCm() < $req.getMinHeightCm())
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Height",
+        0,
+        false,
+        "Breed is shorter than required."
+    ));
+end
+
+rule "Height - Too Tall"
+extends "Height Assessment"
+when
+    eval($traits.getMinHeightCm() > $req.getMaxHeightCm())
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Height",
+        0,
+        false,
+        "Breed is taller than required."
+    ));
+end
+
+rule "Height - Ideal"
+extends "Height Assessment"
+when
+    eval(
+        $traits.getMinHeightCm() >= $req.getMinHeightCm() &&
+        $traits.getMaxHeightCm() <= $req.getMaxHeightCm()
+    )
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Height",
+        100,
+        true,
+        "Breed height satisfies the required range."
+    ));
+end
+
+rule "Height - Partial Match"
+extends "Height Assessment"
+when
+    eval(
+        $traits.getMaxHeightCm() >= $req.getMinHeightCm() &&
+        $traits.getMinHeightCm() <= $req.getMaxHeightCm()
+    )
+then
+    insert(new CriterionFit(
+        $breed,
+        $role,
+        "Height",
+        50,
+        true,
+        "Breed height partially satisfies the required range."
+    ));
+end
+
+/***********************************************************************
+ * AGREGATE PHYSICAL FIT
+ *
+ * Cancluate agreagate scores for physical evaluation.
+ ***********************************************************************/
+
+rule "Physical Fit Aggregate"
+agenda-group "physical-aggregate"
+when
+    $breed : Breed()
+    $role : Role()
+    not PhysicalFit(breed == $breed, role == $role)
+    accumulate(
+        $cf : CriterionFit(breed == $breed, role == $role, $s : score),
+        $evidence : collectList($cf),
+        $avgScore : average($s)
+    )
+then
+end
+
+rule "Physical Fit - Passed"
+extends "Physical Fit Aggregate"
+when
+    not CriterionFit(breed == $breed, role == $role, suitable == false)
+then
+    insert(new PhysicalFit(
+        $breed,
+        $role,
+        $evidence,
+        $avgScore.doubleValue(),
+        true,
+        "Breed satisfies the minimum physical requirements for this role."
+    ));
+end
+
+rule "Physical Fit - Failed"
+extends "Physical Fit Aggregate"
+when
+    exists CriterionFit(breed == $breed, role == $role, suitable == false)
+then
+    insert(new PhysicalFit(
+        $breed,
+        $role,
+        $evidence,
+        $avgScore.doubleValue(),
+        false,
+        "Breed fails at least one physical requirement for this role."
+    ));
+end
+
+
+/*
+rule "Aggregate Physical Fit"
+agenda-group "physical-aggregate"
+when
+    not PhysicalFit(
+        $breed: breed,
+        $role: role
+    )
+then
+    PhysicalFit fit = new PhysicalFit(...);
+    
+    insert(fit);
+end
+
+when
+    $breed : Breed()
+    $role : Role()
+    not PhysicalFit(breed == $breed, role == $role)
+    accumulate(
+        $cf : CriterionFit(breed == $breed, role == $role, $s : score),
+        $evidence : collectList($cf),
+        $avgScore : average($s)
+    )
+    not CriterionFit(breed == $breed, role == $role, suitable == false)
+then
+    insert(new PhysicalFit(
+        $breed,
+        $role,
+        $evidence,
+        $avgScore.doubleValue(),
+        true,
+        "Breed satisfies the minimum physical requirements for this role."
+    ));
+end
+
+rule "Physical Fit - Failed"
+agenda-group "physical-aggregate"
+when
+    $breed : Breed()
+    $role : Role()
+    not PhysicalFit(breed == $breed, role == $role)
+    accumulate(
+        $cf : CriterionFit(breed == $breed, role == $role, $s : score),
+        $evidence : collectList($cf),
+        $avgScore : average($s)
+    )
+    exists CriterionFit(breed == $breed, role == $role, suitable == false)
+then
+    insert(new PhysicalFit(
+        $breed,
+        $role,
+        $evidence,
+        $avgScore.doubleValue(),
+        false,
+        "Breed fails at least one physical requirement for this role."
+    ));
+end
+
+
+// when all role/breed have physical fit
+
+rule "Start behavioural assesment"
+agenda-group "physical-aggregate"
+when
+then
+
+end
+
+rule "Skip behavioural assesment"
+agenda-group "physical-aggregate"
+when
+then
+end
+*/

@@ -1,57 +1,51 @@
-package com.github.cetkovicaleksa.droolmate.rules;
-import com.github.cetkovicaleksa.droolmate.model.RoleRequirement;
+template header
+name
+description
+minHeightCm
+maxHeightCm
+minWeightKg
+maxWeightKg
+minReactivityScore
+maxReactivityScore
+maxAggressionScore
+minTrainabilityScore
+
+package com.github.cetkovicaleksa.droolmate.rules.template;
+
+import com.github.cetkovicaleksa.droolmate.model.duty.*;
+
 dialect "mvel"
 
-/**
- * Template: Role Requirement Initialization
- *
- * Generates one rule per row in roles.csv.
- * Each rule inserts a pre-defined RoleRequirement fact into working memory
- * during the "initialization" agenda-group.
- *
- * Users do NOT construct RoleRequirement directly. They submit a RoleQuery
- * with only a roleId; the matching pre-defined RoleRequirement is picked up
- * by backward.drl to drive the rest of the reasoning chain.
- *
- * Data source: roles.csv
- * Columns:    roleId, roleName,
- *             minHeightCm, maxHeightCm, minWeightKg, maxWeightKg,
- *             minReactivityScore, maxReactivityScore,
- *             maxAggressionScore, minTrainabilityScore,
- *             parentRoleId, description
- *
- * @source: ADI Standards and Ethics
- * @source: Handbook on Animal-Assisted Therapy (Fine 2019)
- */
+template "Role Template"
 
-template "Role Requirement Template"
-
-rule "Initialize Role Requirement @{roleName}"
+rule "Initialize Role: @{name}"
     agenda-group "initialization"
     when
+        not exists(Role($name == "@{name}"))
     then
-        // Resolve parentRoleId: treat empty string as null (no parent role).
-        String parentId = "@{parentRoleId}";
-        if (parentId != null && parentId.trim().isEmpty()) {
-            parentId = null;
-        }
-
-        RoleRequirement requirement = new RoleRequirement(
-            "@{roleId}",
-            "@{roleName}",
-            @{minHeightCm},
-            @{maxHeightCm},
-            @{minWeightKg},
-            @{maxWeightKg},
-            @{minReactivityScore},
-            @{maxReactivityScore},
-            @{maxAggressionScore},
-            @{minTrainabilityScore},
-            parentId,
-            "@{description}"
+        Role role = new Role(
+            "@{name}", 
+            "@{description}",
+            new PhysicalRequirements(
+                @{minHeightCm}, 
+                @{maxHeightCm}, 
+                @{minWeightKg}, 
+                @{maxWeightKg}
+            ),
+            new BehaviouralRequirements(
+                @{minReactivityScore}, 
+                @{maxReactivityScore}, 
+                @{maxAggressionScore}, 
+                @{minTrainabilityScore}
+            )
         );
-        insert(requirement);
-        System.out.println("[Init] RoleRequirement inserted: @{roleId} (@{roleName})");
+        
+        insert(role);
+        // ?
+        insert(role.getPhysicalRequirements());
+        insert(role.getBehavioralRequirements());
+        
+        System.out.println("[Init] Role inserted: @{name}");
 end
 
 end template
